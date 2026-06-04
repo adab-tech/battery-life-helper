@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: PowerShell syntax & help
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse BatteryLifeHelper.ps1
+        shell: pwsh
+        run: |
+          $errors = $null
+          $tokens = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/BatteryLifeHelper.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          )
+          if ($errors) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+      - name: Script loads without running menu
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          . ./BatteryLifeHelper.ps1
+          if (-not $script:HelperPlanName) { throw 'Helper script did not load' }
